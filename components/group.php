@@ -69,6 +69,7 @@ class BPCLI_Group extends BPCLI_Component {
 
 		if ( $id = groups_create_group( $r ) ) {
 			groups_update_groupmeta( $id, 'total_member_count', 1 );
+			groups_update_groupmeta( $id, 'mla_oid', 'FXX' ); 
 			$group = groups_get_group( array( 'group_id' => $id ) );
 			WP_CLI::success( "Group $id created: " . bp_get_group_permalink( $group ) );
 		} else {
