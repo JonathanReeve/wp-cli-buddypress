@@ -49,7 +49,7 @@ class BPCLI_Group extends BPCLI_Component {
 			'slug' => '',
 			'description' => '',
 			'creator_id' => 1,
-			'status' => 'public',
+			'status' => 'hidden',
 			'enable_forum' => 0,
 			'date_created' => bp_core_current_time(),
 		) );
@@ -63,9 +63,20 @@ class BPCLI_Group extends BPCLI_Component {
 			$r['slug'] = groups_check_slug( sanitize_title( $r['name'] ) );
 		}
 
+		// Make a URL like http://commons.mla.org/groups/prospective-forum-tc-ecocriticism-and-environmental-humanities/forum/topic/petition/
+		$group_slug = $r['slug']; 
+		$petition_url =  site_url() . "/groups/$group_slug/forum/topic/petition/"; 
+
+		// MLA Descriptions 
+		$r['description'] = 'On this MLA Commons group, you can petition for a new forum preliminarily authorized by the Executive Council as part of the association’s restructuring of division and discussion groups. To learn more about this initiative, please <a href="">read a letter from Margaret W. Ferguson and Marianne Hirsch</a>. To petition for the creation of this new forum, you may add your name as a comment in the <a href="' . $petition_url . '">Petition thread</a> of the forum discussion. (Please note that members may sign no more than five new forum petitions during the 2014 membership year.) Additional information about establishing new forums and the full list of new forums are available in the <a href="">Instructions for Establishing New Forums</a>.'; 
+
 		if ( ! $r['description'] ) {
 			$r['description'] = sprintf( 'Description for group "%s"', $r['name'] );
 		}
+
+		//debugging
+		//WP_CLI::success( "Group description: ".$r['description']);
+		//exit(); 
 
 		if ( $id = groups_create_group( $r ) ) {
 			groups_update_groupmeta( $id, 'total_member_count', 1 );
