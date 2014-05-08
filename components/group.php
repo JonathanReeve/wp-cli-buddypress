@@ -5,6 +5,76 @@
  */
 class BPCLI_Group extends BPCLI_Component {
 
+	/* Create a group forum that shares the name of the group. 
+	 * Adapted from the very messy plugins/bbpress/includes/extend/buddypress/groups.php
+	 */ 
+	private function add_forum($group_id, $group_status, $group_name, $group_description, $group_slug) { 
+
+		$bbp_forums = new BBP_Forums_Group_Extension; 
+
+		// Create a new forum
+
+		// Set the default forum status
+		switch ( $group_status ) {
+		case 'hidden'  :
+			$status = bbp_get_hidden_status_id();
+			break;
+		case 'private' :
+			$status = bbp_get_private_status_id();
+			break;
+		case 'public'  :
+		default        :
+			$status = bbp_get_public_status_id();
+			break;
+		}
+
+		// Create the initial forum
+		$forum_id = bbp_insert_forum( array(
+			'post_parent'  => bbp_get_group_forums_root_id(),
+			'post_title'   => $group_name,
+			'post_content' => $group_description,
+			'post_status'  => $group_status
+		) );
+
+		// Setup forum args with forum ID
+		$new_forum_args = array( 
+			'forum_id' => $forum_id, 
+			'group_id' => $group_id 
+		);
+
+		// Run the BP-specific functions for new groups
+		$bbp_forums->new_forum( $new_forum_args );
+
+		$this->add_mla_topics($forum_id, $group_slug); 
+	} 
+
+	private function add_mla_topics($forum_id, $group_slug) { 
+		$posts = array(); 
+		$discussion_url = site_url() . "/groups/$group_slug/forum/topic/discussion/"; 
+		$petition_url =  site_url() . "/groups/$group_slug/forum/topic/petition/"; 
+		$posts[] = array(
+			'title' => 'Petition',
+			'content' => "Please leave your name in a comment to endorse the formation of this new forum. Any comments or questions should be posted in the <a href=\"$discussion_url\">discussion thread</a>.", 
+		); 
+		$posts[] = array(
+			'title' => 'Volunteer',
+			'content' => 'Use this thread to register your interest in serving on the initial executive committee for this new forum. (See the <a href="http://executivecouncil.commons.mla.org/post/new-forum-structure-faq">FAQ</a> for more information about the executive committee.)',
+		); 
+		$posts[] = array(
+			'title' => 'Discussion',
+			'content' => "Please use this thread to discuss the new forum's areas of interest or to raise questions about its focus. To support the formation of this new forum, please <a href=\"$petition_url\">sign the petition</a>.",
+		); 
+		foreach ($posts as $post) { 
+			$topic_data = array(
+				'post_parent'    => $forum_id, // forum ID
+				'post_content'   => $post['content'],
+				'post_title'     => $post['title'],
+				'post_author'    => 716,
+			);
+			$topic_id = bbp_insert_topic($topic_data); 
+			bbp_stick_topic($topic_id); 
+		} 
+	} 
 	/**
 	 * Create a group.
 	 *
@@ -48,7 +118,7 @@ class BPCLI_Group extends BPCLI_Component {
 			'name' => '',
 			'slug' => '',
 			'description' => '',
-			'creator_id' => 1,
+			'creator_id' => 60,
 			'status' => 'hidden',
 			'enable_forum' => 0,
 			'date_created' => bp_core_current_time(),
@@ -68,7 +138,7 @@ class BPCLI_Group extends BPCLI_Component {
 		$petition_url =  site_url() . "/groups/$group_slug/forum/topic/petition/"; 
 
 		// MLA Descriptions 
-		$r['description'] = 'On this MLA Commons group, you can petition for a new forum preliminarily authorized by the Executive Council as part of the association’s restructuring of division and discussion groups. To learn more about this initiative, please <a href="">read a letter from Margaret W. Ferguson and Marianne Hirsch</a>. To petition for the creation of this new forum, you may add your name as a comment in the <a href="' . $petition_url . '">Petition thread</a> of the forum discussion. (Please note that members may sign no more than five new forum petitions during the 2014 membership year.) Additional information about establishing new forums and the full list of new forums are available in the <a href="">Instructions for Establishing New Forums</a>.'; 
+		$r['description'] = 'On this MLA Commons group, you can sign the petition for a potential new forum approved by the Executive Council as part of the association’s restructuring of division and discussion groups. To learn more about this initiative, please <a href="http://executivecouncil.commons.mla.org/post/new-forum-structure-letter">read a letter from Margaret W. Ferguson and Marianne Hirsch</a>. To petition for the creation of this new forum, you may add your name as a comment in the <a href="' . $petition_url . '">Petition thread</a> of the forum discussion. (Please note that members may sign no more than five new forum petitions during the 2014 membership year.) Additional information about establishing new forums and the full list of new forums are available in the <a href="http://executivecouncil.commons.mla.org/instructions-for-establishing-new-forums">Instructions for Establishing New Forums</a>.'; 
 
 		if ( ! $r['description'] ) {
 			$r['description'] = sprintf( 'Description for group "%s"', $r['name'] );
@@ -82,9 +152,18 @@ class BPCLI_Group extends BPCLI_Component {
 			groups_update_groupmeta( $id, 'total_member_count', 1 );
 			groups_update_groupmeta( $id, 'mla_oid', 'FXX' ); 
 			$group = groups_get_group( array( 'group_id' => $id ) );
-			WP_CLI::success( "Group $id created: " . bp_get_group_permalink( $group ) );
-		} else {
-			WP_CLI::error( 'Could not create group.' );
+			if($r['enable_forum']) { 
+				$this->add_forum($id, $r['status'], $r['name'], $r['description'], $r['slug']); 
+			} 
+			//make Dan an admin, too
+			$member_args = array(
+				'group-id' => $id,
+				'user-id'  => 716, 
+				'role' => 'admin', 
+			); 
+			$this->add_member("",$member_args); 
+
+			WP_CLI::success( "Group $id created: " . bp_get_group_permalink( $group ) ); } else { WP_CLI::error( 'Could not create group.' );
 		}
 
 	}
@@ -149,7 +228,7 @@ class BPCLI_Group extends BPCLI_Component {
 		if ( $joined ) {
 			if ( 'member' !== $r['role'] ) {
 				$the_member = new BP_Groups_Member( $user_id, $group_id );
-				$member->promote( $r['role'] );
+				$the_member->promote( $r['role'] );
 			}
 
 			$success = sprintf(
