@@ -224,14 +224,11 @@ class BPCLI_Group extends BPCLI_Component {
 	 * --group-id=<group>
 	 * : Identifier for the group. Accepts either a slug or a numeric ID.
 	 * 
-	 * --description=<description>
-	 * : The new group description. 
-	 *
 	 * ## EXAMPLES
 	 *
-	 *        wp bp group update_description --group-id=3 --description="A very fine group indeed." 
+	 *        wp bp group update_description --group-id=3
 	 *
-	 * @synopsis --group-id=<group> --description=<description>
+	 * @synopsis --group-id=<group>
 	 *
 	 * @since 1.3.0
 	 */
@@ -239,7 +236,6 @@ class BPCLI_Group extends BPCLI_Component {
 
 		$r = wp_parse_args( $assoc_args, array(
 			'group-id' => null,
-			'description' => null,
 		) );
 
 		// Convert --group-id to group ID
@@ -256,20 +252,20 @@ class BPCLI_Group extends BPCLI_Component {
 			WP_CLI::error( 'No group found by that slug or id.' );
 		}
 
-		// Check that user provided --description="something" 
-		if ( empty( $r['description'] ) ) { 
-			WP_CLI::error( 'You must give a group new group description.' );
-		} 	
-		
-		// Convert --group-description to $group_desc
-		$group_desc = $r['description']; 
-
 		$name = $group_obj->name; 
-		$description = $group_obj->description; 
+		$old = $group_obj->description; 
 		WP_CLI::success( 'Group name: '.$name ); 
-		WP_CLI::success( 'Description: '.$description ); 
+		WP_CLI::success( 'Old description: '.$old ); 
 		
-		if ( groups_edit_base_group_details ( $group_id, $name, $group_desc ) ) { 
+	        $insert = 'The Program Committee will evaluate those prospective forums that obtained at least thirty-five signatures and five leadership volunteers by 15 June. Though that deadline has passed, we still encourage you to join groups that interest you and voice your support by signing the petition and volunteering. Support for prospective forums will be evaluated periodically. '; 
+
+		$cutpoint = strpos($old, 'Additional information');
+		$firstpart = substr($old, 0, $cutpoint);
+		$secondpart = substr($old, $cutpoint);
+
+		$new = $firstpart.$insert.$secondpart; 
+
+		if ( groups_edit_base_group_details ( $group_id, $name, $new ) ) { 
 			$group_obj = groups_get_group( array( 'group_id' => $group_id ) );
 			$newdescription = $group_obj->description; 
 			WP_CLI::success ( 'Successfully changed group details. New description: '.$newdescription ); 
