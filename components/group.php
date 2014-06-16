@@ -257,15 +257,16 @@ class BPCLI_Group extends BPCLI_Component {
 		WP_CLI::success( 'Group name: '.$name ); 
 		WP_CLI::success( 'Old description: '.$old ); 
 		
-	        $insert = 'The Program Committee will evaluate those prospective forums that obtained at least thirty-five signatures and five leadership volunteers by 15 June. Though that deadline has passed, we still encourage you to join groups that interest you and voice your support by signing the petition and volunteering. Support for prospective forums will be evaluated periodically. '; 
-
-		$cutpoint = strpos($old, 'Additional information');
+		$insert = "\n\n"; 
+		$cutpoint = strpos($old, 'The Program');
 		$firstpart = substr($old, 0, $cutpoint);
 		$secondpart = substr($old, $cutpoint);
 
 		$new = $firstpart.$insert.$secondpart; 
 
-		if ( groups_edit_base_group_details ( $group_id, $name, $new ) ) { 
+		WP_CLI::success( 'Changing with this description: '.$new ); 
+
+		if ( groups_edit_base_group_details ( $group_id, $name, $new, $notify_members=0 ) ) { 
 			$group_obj = groups_get_group( array( 'group_id' => $group_id ) );
 			$newdescription = $group_obj->description; 
 			WP_CLI::success ( 'Successfully changed group details. New description: '.$newdescription ); 
